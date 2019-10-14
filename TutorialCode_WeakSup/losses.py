@@ -42,7 +42,6 @@ class Size_Loss_naive(torch.autograd.Function):
     """
     def forward(self, input):
         pred_size = einsum("bcwh->bc", input)[:, 1]
-
         target_size = 7845
 
         loss = (pred_size - target_size) ** 2
