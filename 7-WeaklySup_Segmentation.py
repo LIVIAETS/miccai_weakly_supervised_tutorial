@@ -1,19 +1,24 @@
-from torch.utils.data import DataLoader
-from torchvision import transforms
-from SegmentationUtils.progressBar import printProgressBar
+#!/usr/bin/env python3
 
 import os
-from TutorialCode_WeakSup.medicalDataLoader import *
-from TutorialCode_WeakSup.ShallowNet import *
-from TutorialCode_WeakSup.utils import *
-
-from TutorialCode_WeakSup.losses import *
-
 import argparse
 
-###########################
+import torch
+import numpy as np
+from torch import nn
+from torch.utils.data import DataLoader
+from torchvision import transforms
 
-                       
+from SegmentationUtils.progressBar import printProgressBar
+from TutorialCode_WeakSup.medicalDataLoader import (MedicalImageDataset)
+from TutorialCode_WeakSup.ShallowNet import (shallowCNN)
+from TutorialCode_WeakSup.utils import (weights_init,
+                                        saveImages)
+
+from TutorialCode_WeakSup.losses import (Size_Loss_naive,
+                                         CE_Loss_Weakly)
+
+
 def runTraining(args):
     print('-' * 40)
     print('~~~~~~~~  Starting the training... ~~~~~~')
@@ -26,9 +31,8 @@ def runTraining(args):
     epoch = args.epochs
     circle_size = 7845
     img_size = 256
-    mode = args.mode # 0-> Only CE   1 -> CE + Size loss
+    mode = args.mode  # 0-> Only CE   1 -> CE + Size loss
     root_dir = 'TutorialCode_WeakSup/Data/ToyExample'
-
 
     print(' {} '.format(root_dir))
     transform = transforms.Compose([
@@ -58,10 +62,10 @@ def runTraining(args):
                                   equalize=False)
 
     val_loader_save_imagesPng = DataLoader(val_set,
-                                        batch_size=batch_size_val_savePng,
-                                        num_workers=5,
-                                        shuffle=False)
-                                        
+                                           batch_size=batch_size_val_savePng,
+                                           num_workers=5,
+                                           shuffle=False)
+
     # Initialize
     print("~~~~~~~~~~~ Creating the model ~~~~~~~~~~")
     num_classes = 2
@@ -81,9 +85,8 @@ def runTraining(args):
     if torch.cuda.is_available():
         net.cuda()
         softMax.cuda()
-    
-    optimizer = torch.optim.Adam(net.parameters(), lr=lr, betas=(0.5, 0.999))
 
+    optimizer = torch.optim.Adam(net.parameters(), lr=lr, betas=(0.5, 0.999))
 
     Losses_CE = []
     Losses_Size = []
@@ -106,48 +109,47 @@ def runTraining(args):
                 continue
 
             optimizer.zero_grad()
-            MRI = to_var(image)
-            Segmentation = to_var(labels).long()
+            MRI = image
+            Segmentation = labels.long()
 
-            ################### Train  ###################
+            # ################## Train  ###################
 
-  
             segmentation_prediction = net(MRI)
             segment_prob = softMax(segmentation_prediction)
-            
-            ## ------ Compute some metrics -------- ##
-            segment_circle = (segment_prob[:,1,:,:] > 0.5 ).view((segment_prob.shape[2], segment_prob.shape[3])).cpu().data.numpy()
-            sizeDiff.append(abs(segment_circle.sum()-circle_size))
 
-            ###   ------ Define the losses --- ####
-            # ---- CE weakly loss ------ #
+            # # ------ Compute some metrics -------- ##
+            segment_circle = (segment_prob[:, 1, :, :] > 0.5).view((segment_prob.shape[2], segment_prob.shape[3])).cpu().data.numpy()
+            sizeDiff.append(abs(segment_circle.sum() - circle_size))
+
+            # ##   ------ Define the losses --- ####
+            # ---- CE weakly loss ------ #s
             # It will get ideally prediction, GT and weak labels (to mask the pixels non annotated)
-            lossCE = cross_entropy_loss_weakly(segmentation_prediction, Segmentation.view(1,img_size,img_size), Segmentation.view(1,img_size,img_size))
+            lossCE = cross_entropy_loss_weakly(segment_prob, Segmentation[:, 0, ...])
 
             # ----- Size losses ------ #
-            sizeLoss_val = sizeLoss(segment_prob, Segmentation.view(1,img_size,img_size))
+            sizeLoss_val = sizeLoss(segment_prob)
 
-            if (mode==0):
-                lossEpoch =lossCE
+            if mode == 0:
+                lossEpoch = lossCE
             else:
                 lossEpoch = lossCE + sizeLoss_val
-            #lossEpoch = sizeLoss_val
+            # lossEpoch = sizeLoss_val
             net.zero_grad()
             lossEpoch.backward(retain_graph=True)
 
             optimizer.step()
 
-            lossValCE.append(lossCE.cpu().data[0].numpy())
-            lossValSize.append(sizeLoss_val.cpu().data[0].numpy())
+            lossValCE.append(lossCE.item())
+            lossValSize.append(sizeLoss_val.item())
 
         sizeDifferences.append(np.mean(sizeDiff))
         Losses_CE.append(np.mean(lossValCE))
         Losses_Size.append(np.mean(lossValSize))
-           
-        printProgressBar(totalImages, totalImages,
-                         done="[Training] Epoch: {}, LossCE: {:.4f}, LossSize: {:.4f}, SizeDiff: {} ".format(i,np.mean(lossValCE),np.mean(lossValSize),np.mean(sizeDiff)))
 
-        if (mode == 0):
+        printProgressBar(totalImages, totalImages,
+                         done=f"[Training] Epoch: {i}, LossCE: {np.mean(lossValCE):.4f}, LossSize: {np.mean(lossValSize):.4f}, SizeDiff: {np.mean(sizeDiff)} ")
+
+        if mode == 0:
             modelName = 'Weakly_Sup_CE_Loss'
         else:
             modelName = 'Weakly_Sup_CE_Loss_SizePenalty'
@@ -159,9 +161,10 @@ def runTraining(args):
         np.save(os.path.join(directory, 'CE_Losses.npy'), Losses_CE)
         np.save(os.path.join(directory, 'Losses_Size.npy'), Losses_Size)
         np.save(os.path.join(directory, 'sizeDifferences.npy'), sizeDifferences)
-        
-        if (i%10)==0:
-            saveImages(net, val_loader_save_imagesPng, batch_size_val_savePng, i,modelName)
+
+        if (i % 10) == 0:
+            saveImages(net, val_loader_save_imagesPng, batch_size_val_savePng, i, modelName)
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

@@ -9,12 +9,52 @@ import skimage.transform as skiTransf
 from SegmentationUtils.progressBar import printProgressBar
 import scipy.io as sio
 import pdb
+
+from torch import Tensor
+from Typing import Set, Iterable, cast
+
 import time
 
-def to_var(x):
-    if torch.cuda.is_available():
-        x = x.cuda()
-    return Variable(x)
+
+# Assert utils
+def uniq(a: Tensor) -> Set:
+    return set(torch.unique(a.cpu()).numpy())
+
+
+def sset(a: Tensor, sub: Iterable) -> bool:
+    return uniq(a).issubset(sub)
+
+
+def eq(a: Tensor, b) -> bool:
+    return torch.eq(a, b).all()
+
+
+def simplex(t: Tensor, axis=1) -> bool:
+    _sum = cast(Tensor, t.sum(axis).type(torch.float32))
+    _ones = torch.ones_like(_sum, dtype=torch.float32)
+    return torch.allclose(_sum, _ones)
+
+
+def one_hot(t: Tensor, axis=1) -> bool:
+    return simplex(t, axis) and sset(t, [0, 1])
+
+
+def class2one_hot(seg: Tensor, K: int) -> Tensor:
+    # Breaking change but otherwise can't deal with both 2d and 3d
+    # if len(seg.shape) == 3:  # Only w, h, d, used by the dataloader
+    #     return class2one_hot(seg.unsqueeze(dim=0), K)[0]
+
+    assert sset(seg, list(range(K))), (uniq(seg), K)
+
+    b, *img_shape = seg.shape
+
+    device = seg.device
+    res = torch.zeros((b, K, *img_shape), dtype=torch.int32, device=device).scatter_(1, seg[:, None, ...], 1)
+
+    assert res.shape == (b, K, *img_shape)
+    assert one_hot(res)
+
+    return res
 
 
 class computeDiceOneHot(nn.Module):
@@ -63,19 +103,19 @@ def DicesToDice(Dices):
     return (2 * sums[0] + 1e-8) / (sums[1] + 1e-8)
 
 
-    
+
 def getSingleImage(pred):
     # input is a 4-channels image corresponding to the predictions of the net
     # output is a gray level image (1 channel) of the segmentation with "discrete" values
     Val = to_var(torch.zeros(4))
-    
+
     # ACDC
     Val[1] = 0.33333334
     Val[2] = 0.66666669
     Val[3] = 1.0
 
     x = predToSegmentation(pred)
-   
+
     out = x * Val.view(1, 4, 1, 1)
     return out.sum(dim=1, keepdim=True)
 
@@ -119,7 +159,7 @@ def getTargetSegmentation(batch):
     # input is 1-channel of values between 0 and 1
     # values are as follows : 0, 0.3137255, 0.627451 and 0.94117647
     # output is 1 channel of discrete values : 0, 1, 2 and 3
-    
+
     denom = 0.33333334 # for ACDC this value
     #denom = 0.24705882 # for Chaos Dataset this value
     #denom = 0.25 # for Chaos Dataset this value
@@ -133,11 +173,11 @@ def getTargetSegmentation(batch):
 from scipy import ndimage
 
 
-    
+
 def saveImages(net, img_batch, batch_size, epoch, modelName):
     # print(" Saving images.....")
     path = 'SegmentationUtils/Results/Images/' + modelName
-    
+
     if not os.path.exists(path):
         os.makedirs(path)
     total = len(img_batch)
@@ -154,10 +194,10 @@ def saveImages(net, img_batch, batch_size, epoch, modelName):
         segmentation_prediction = net(MRI)
 
         pred_y = softMax(segmentation_prediction)
-        
+
         segmentation = getSingleImage(pred_y)
 
-        
+
         out = torch.cat((MRI, segmentation, Segmentation))
 
         torchvision.utils.save_image(out.data, os.path.join(path, str(i) + '_Ep_' + str(epoch) + '.png'),
@@ -167,7 +207,7 @@ def saveImages(net, img_batch, batch_size, epoch, modelName):
                                      range=None,
                                      scale_each=False,
                                      pad_value=0)
-                                    
+
     printProgressBar(total, total, done="Images saved !")
 
 
@@ -177,7 +217,7 @@ def inference(net, img_batch, batch_size, epoch):
     Dice1 = torch.zeros(total, 2)
     Dice2 = torch.zeros(total, 2)
     Dice3 = torch.zeros(total, 2)
-    
+
     net.eval()
 
     img_names_ALL = []
@@ -185,7 +225,7 @@ def inference(net, img_batch, batch_size, epoch):
     dice = computeDiceOneHot().cuda()
     softMax = nn.Softmax().cuda()
     for i, data in enumerate(img_batch):
-        
+
         printProgressBar(i, total, prefix="[Inference] Getting segmentations...", length=30)
         image, labels, img_names = data
         img_names_ALL.append(img_names[0].split('/')[-1].split('.')[0])
@@ -209,7 +249,7 @@ def inference(net, img_batch, batch_size, epoch):
     ValDice1 = DicesToDice(Dice1)
     ValDice2 = DicesToDice(Dice2)
     ValDice3 = DicesToDice(Dice3)
-   
+
     return [ValDice1,ValDice2,ValDice3]
 
 

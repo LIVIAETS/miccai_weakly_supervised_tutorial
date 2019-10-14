@@ -1,18 +1,12 @@
-from __future__ import print_function, division
+#!/usr/bin/env python3
+
 import os
-import torch
-import pandas as pd
-from skimage import io, transform
-import numpy as np
-from torch.utils.data import Dataset, DataLoader
-from torchvision import transforms, utils
+from torch.utils.data import Dataset
 from PIL import Image, ImageOps
-from random import random, randint
+from random import random
 
 # Ignore warnings
 import warnings
-
-import pdb
 
 warnings.filterwarnings("ignore")
 
@@ -20,45 +14,19 @@ warnings.filterwarnings("ignore")
 def make_dataset(root, mode):
     assert mode in ['train', 'val', 'test']
     items = []
-    if mode == 'train':
-        train_img_path = os.path.join(root, 'train', 'Img')
-        train_mask_path = os.path.join(root, 'train', 'GT')
 
-        images = os.listdir(train_img_path)
-        labels = os.listdir(train_mask_path)
+    img_path = os.path.join(root, mode, 'Img')
+    mask_path = os.path.join(root, mode, 'GT')
 
-        images.sort()
-        labels.sort()
+    images = os.listdir(img_path)
+    labels = os.listdir(mask_path)
 
-        for it_im, it_gt in zip(images, labels):
-            item = (os.path.join(train_img_path, it_im), os.path.join(train_mask_path, it_gt))
-            items.append(item)
-    elif mode == 'val':
-        train_img_path = os.path.join(root, 'val', 'Img')
-        train_mask_path = os.path.join(root, 'val', 'GT')
+    images.sort()
+    labels.sort()
 
-        images = os.listdir(train_img_path)
-        labels = os.listdir(train_mask_path)
-
-        images.sort()
-        labels.sort()
-
-        for it_im, it_gt in zip(images, labels):
-            item = (os.path.join(train_img_path, it_im), os.path.join(train_mask_path, it_gt))
-            items.append(item)
-    else:
-        train_img_path = os.path.join(root, 'test', 'Img')
-        train_mask_path = os.path.join(root, 'test', 'GT')
-
-        images = os.listdir(train_img_path)
-        labels = os.listdir(train_mask_path)
-
-        images.sort()
-        labels.sort()
-
-        for it_im, it_gt in zip(images, labels):
-            item = (os.path.join(train_img_path, it_im), os.path.join(train_mask_path, it_gt))
-            items.append(item)
+    for it_im, it_gt in zip(images, labels):
+        item = (os.path.join(img_path, it_im), os.path.join(mask_path, it_gt))
+        items.append(item)
 
     return items
 
