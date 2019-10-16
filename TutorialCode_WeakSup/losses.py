@@ -1,10 +1,9 @@
 #!/usr/bin/env python3
 
-import torch
 from torch import einsum
 
 # from TutorialCode_WeakSup.utils import class2one_hot
-from .utils import class2one_hot, simplex, sset
+from .utils import simplex, sset
 
 
 # ######## ------ Cross-entropy + softmax loss function ---------- ###########

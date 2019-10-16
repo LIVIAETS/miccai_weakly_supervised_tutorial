@@ -2,8 +2,6 @@
 
 import os
 import argparse
-from operator import add
-from functools import reduce
 
 import torch
 import numpy as np
@@ -79,11 +77,7 @@ def runTraining(args):
     print("~~~~~~~~~~~ Creating the model ~~~~~~~~~~")
     num_classes = 2
     initial_kernels = 4
-
-    # myNetwork
     net = shallowCNN(1, initial_kernels, num_classes)
-
-    # Initialize
     net.apply(weights_init)
 
     # Define losses and softmax
@@ -124,19 +118,18 @@ def runTraining(args):
             lossCE = cross_entropy_loss_weakly(segment_prob, Segmentation[:, 0, ...])
             assert lossCE.requires_grad
 
-            if mode == 0 or i <= 1:
+            if mode == 0 or i <= 1:  # Trick to handle the fact that we have only 10 training samples
                 lossEpoch = lossCE
                 lossValSize.append(0)
             else:
                 sizeLoss_val = sizeLoss(segment_prob)
                 assert sizeLoss_val.requires_grad
                 lossEpoch = lossCE + sizeLoss_val
-                # lossEpoch = reduce(add, [lossCE, sizeLoss_val])
                 assert lossEpoch.requires_grad
 
                 lossValSize.append(sizeLoss_val.item())
 
-            net.zero_grad()
+            # net.zero_grad()
             lossEpoch.backward()
             optimizer.step()
 
@@ -164,7 +157,7 @@ def runTraining(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--epochs', default=250, type=int)
+    parser.add_argument('--epochs', default=200, type=int)
     parser.add_argument('--mode', default=0, type=int)
     args = parser.parse_args()
     runTraining(args)
