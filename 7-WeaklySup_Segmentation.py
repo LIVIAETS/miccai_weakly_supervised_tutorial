@@ -2,11 +2,12 @@
 
 import os
 import argparse
+from operator import add
+from functools import reduce
 
 import torch
 import numpy as np
 from torch import nn
-from tqdm import tqdm
 from torch import einsum
 from torch.utils.data import DataLoader
 from torchvision import transforms
@@ -15,7 +16,9 @@ from TutorialCode_WeakSup.medicalDataLoader import (MedicalImageDataset)
 from TutorialCode_WeakSup.ShallowNet import (shallowCNN)
 from TutorialCode_WeakSup.utils import (weights_init,
                                         saveImages,
-                                        probs2one_hot)
+                                        probs2one_hot,
+                                        sset,
+                                        tqdm_)
 
 from TutorialCode_WeakSup.losses import (Size_Loss_naive,
                                          CE_Loss_Weakly)
@@ -101,16 +104,16 @@ def runTraining(args):
         lossValSize = []
         sizeDiff = []
 
-        # for j, data in enumerate(train_loader):
-
         desc = f">> Training   ({i})"
-        tq_iter = tqdm(enumerate(train_loader), desc=desc)
+        tq_iter = tqdm_(enumerate(train_loader), desc=desc)
         for j, data in tq_iter:
             image, labels, img_names = data
 
             optimizer.zero_grad()
             MRI = image
             Segmentation = labels.long()
+            assert 0 <= MRI.min() and MRI.max() <= 1
+            assert sset(Segmentation, [0, 1])
 
             segmentation_prediction = net(MRI)
             segment_prob = softMax(segmentation_prediction)
@@ -119,25 +122,29 @@ def runTraining(args):
             sizeDiff.append((pred_circle_size - circle_size).abs().float().mean())
 
             lossCE = cross_entropy_loss_weakly(segment_prob, Segmentation[:, 0, ...])
-            sizeLoss_val = sizeLoss(segment_prob)
+            assert lossCE.requires_grad
 
             if mode == 0:
                 lossEpoch = lossCE
+                lossValSize.append(0)
             else:
+                sizeLoss_val = sizeLoss(segment_prob)
+                assert sizeLoss_val.requires_grad
                 lossEpoch = lossCE + sizeLoss_val
+                # lossEpoch = reduce(add, [lossCE, sizeLoss_val])
+                assert lossEpoch.requires_grad
+
+                lossValSize.append(sizeLoss_val.item())
 
             net.zero_grad()
             lossEpoch.backward()
-
             optimizer.step()
 
             lossValCE.append(lossCE.item())
-            lossValSize.append(sizeLoss_val.item())
 
-            tq_iter.set_postfix({"Epoch": f"{i}",
-                                 "LossCE": f"{np.mean(lossValCE):.4f}",
-                                 "LossSize": f"{np.mean(lossValSize):.2f}",
-                                 "SizeDiff": f"{np.mean(sizeDiff):.1f}"})
+            tq_iter.set_postfix({"SizeDiff": f"{np.mean(sizeDiff):6.1f}",
+                                 "LossCE": f"{np.mean(lossValCE):5.2e}",
+                                 **({"LossSize": f"{np.mean(lossValSize):5.2e}"} if mode == 1 else {})})
 
         sizeDifferences.append(np.mean(sizeDiff))
         Losses_CE.append(np.mean(lossValCE))
@@ -155,9 +162,13 @@ def runTraining(args):
             saveImages(net, val_loader_save_imagesPng, batch_size_val_savePng, i, modelName)
 
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--epochs', default=10000, type=int)
     parser.add_argument('--mode', default=0, type=int)
     args = parser.parse_args()
     runTraining(args)
+
+
+if __name__ == '__main__':
+    main()

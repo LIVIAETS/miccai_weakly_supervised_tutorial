@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 
 import os
+from functools import partial
 from typing import Set, Iterable, cast
 
 import torch
@@ -8,6 +9,10 @@ import torchvision
 import torch.nn as nn
 from tqdm import tqdm
 from torch import Tensor
+
+tqdm_ = partial(tqdm, ncols=175,
+                leave=True,
+                bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [' '{rate_fmt}{postfix}]')
 
 
 def weights_init(m):
@@ -80,44 +85,6 @@ def probs2one_hot(probs: Tensor) -> Tensor:
     return res
 
 
-def getSingleImage(pred):
-    # input is a 4-channels image corresponding to the predictions of the net
-    # output is a gray level image (1 channel) of the segmentation with "discrete" values
-    Val = torch.zeros(4)
-
-    # ACDC
-    Val[1] = 0.33333334
-    Val[2] = 0.66666669
-    Val[3] = 1.0
-
-    x = predToSegmentation(pred)
-    _, _1, *img_shape = x.shape
-
-    padded = torch.zeros(1, 4, *img_shape)
-    padded[:, 0, ...] = x[:, 0, ...]
-    padded[:, 3, ...] = x[:, 1, ...]
-
-    out = padded * Val[None, :, None, None]
-    return out.sum(dim=1, keepdim=True)
-
-
-def predToSegmentation(pred):
-    Max = pred.max(dim=1, keepdim=True)[0]
-    x = pred / Max
-    return (x == 1).float()
-
-
-def getOneHotSegmentation(batch):
-    backgroundVal = 0
-    label1 = 0.33333334
-    label2 = 0.66666669
-    label3 = 1.0
-
-    oneHotLabels = torch.cat((batch == backgroundVal, batch == label1, batch == label2, batch == label3),
-                             dim=1)
-    return oneHotLabels.float()
-
-
 def saveImages(net, img_batch, batch_size, epoch, modelName):
     # print(" Saving images.....")
     path = 'Results/Images/' + modelName
@@ -128,20 +95,20 @@ def saveImages(net, img_batch, batch_size, epoch, modelName):
     net.eval()
     softMax = nn.Softmax()
 
-    for i, data in tqdm(enumerate(img_batch)):
+    desc = f">> Validation ({epoch})"
+    tq_iter = tqdm_(enumerate(img_batch), desc=desc)
+    for i, data in tq_iter:
         # printProgressBar(i, total, prefix="Saving images.....", length=30)
         image, labels, img_names = data
 
         MRI = image
-        Segmentation = labels
 
         segmentation_prediction = net(MRI)
-
         pred_y = softMax(segmentation_prediction)
 
-        segmentation = getSingleImage(pred_y)
+        segmentation = probs2class(pred_y)[:, None, ...].float()
 
-        out = torch.cat((MRI, segmentation, Segmentation))
+        out = torch.cat((MRI, segmentation, labels))
 
         torchvision.utils.save_image(out.data, os.path.join(path, str(i) + '_Ep_' + str(epoch) + '.png'),
                                      nrow=batch_size,
@@ -150,7 +117,3 @@ def saveImages(net, img_batch, batch_size, epoch, modelName):
                                      range=None,
                                      scale_each=False,
                                      pad_value=0)
-
-    print("Images saved !")
-
-    # printProgressBar(total, total, done="Images saved !")

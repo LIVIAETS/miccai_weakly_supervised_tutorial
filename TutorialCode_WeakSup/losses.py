@@ -4,7 +4,7 @@ import torch
 from torch import einsum
 
 # from TutorialCode_WeakSup.utils import class2one_hot
-from .utils import class2one_hot
+from .utils import class2one_hot, simplex
 
 
 # ######## ------ Cross-entropy + softmax loss function ---------- ###########
@@ -35,12 +35,18 @@ class CE_Loss_Weakly():
 
 # ######## ------ Size loss function  (naive way) ---------- ###########
 # --- This function will push the prediction to be close ot sizeGT ---#
-class Size_Loss_naive(torch.autograd.Function):
+class Size_Loss_naive():
     """
         Behaviour not exactly the same ; original numpy code used thresholding.
         Not quite sure it will have an inmpact or not
     """
-    def forward(self, input):
+    def __init__(self, **kwargs):
+        # Self.idc is used to filter out some classes of the target mask. Use fancy indexing
+        print(f"Initialized {self.__class__.__name__} with {kwargs}")
+
+    def __call__(self, input):
+        assert simplex(input)
+
         pred_size = einsum("bcwh->bc", input)[:, 1]
         target_size = 7845
 
