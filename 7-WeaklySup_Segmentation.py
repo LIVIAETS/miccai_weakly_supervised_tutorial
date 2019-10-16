@@ -118,7 +118,7 @@ def runTraining(args):
             lossCE = cross_entropy_loss_weakly(segment_prob, Segmentation[:, 0, ...])
             assert lossCE.requires_grad
 
-            if mode == 0 or i <= 1:  # Trick to handle the fact that we have only 10 training samples
+            if mode == 0 or i <= 2:  # Trick to handle the fact that we have only 10 training samples
                 lossEpoch = lossCE
                 lossValSize.append(0)
             else:
@@ -151,7 +151,7 @@ def runTraining(args):
         np.save(os.path.join(directory, 'Losses_Size.npy'), Losses_Size)
         np.save(os.path.join(directory, 'sizeDifferences.npy'), sizeDifferences)
 
-        if (i % 10) == 0:
+        if (i % 5) == 0:
             saveImages(net, val_loader_save_imagesPng, batch_size_val_savePng, i, modelName)
 
 
