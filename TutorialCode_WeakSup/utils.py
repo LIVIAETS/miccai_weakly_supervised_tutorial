@@ -110,7 +110,8 @@ def saveImages(net, img_batch, batch_size, epoch, modelName):
 
         out = torch.cat((MRI, segmentation, labels))
 
-        torchvision.utils.save_image(out.data, os.path.join(path, str(i) + '_Ep_' + str(epoch) + '.png'),
+        torchvision.utils.save_image(out.data, os.path.join(path,
+                                                            f"{i}_Ep_{epoch:04d}.png"),
                                      nrow=batch_size,
                                      padding=2,
                                      normalize=False,
