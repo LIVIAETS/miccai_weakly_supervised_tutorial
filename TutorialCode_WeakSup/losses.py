@@ -4,7 +4,7 @@ import torch
 from torch import einsum
 
 # from TutorialCode_WeakSup.utils import class2one_hot
-from .utils import class2one_hot, simplex
+from .utils import class2one_hot, simplex, sset
 
 
 # ######## ------ Cross-entropy + softmax loss function ---------- ###########
@@ -22,10 +22,11 @@ class CE_Loss_Weakly():
         print(f"Initialized {self.__class__.__name__} with {kwargs}")
 
     def __call__(self, probs, weak_target):
-        log_p = (probs[:, self.idc, ...] + 1e-10).log()
+        assert simplex(probs)
+        assert sset(weak_target, [0, 1])
 
-        one_hot_target = class2one_hot(weak_target, 2)
-        mask = one_hot_target[:, self.idc, ...].type(torch.float32)
+        log_p = (probs[:, self.idc, ...] + 1e-10).log()
+        mask = weak_target[:, None, ...].float()
 
         loss = - einsum(f"bkwh,bkwh->", mask, log_p)
         loss /= mask.sum() + 1e-10
@@ -52,4 +53,4 @@ class Size_Loss_naive():
 
         loss = (pred_size - target_size) ** 2
 
-        return loss.mean() / 100
+        return loss.mean() / 1000000

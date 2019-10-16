@@ -124,7 +124,7 @@ def runTraining(args):
             lossCE = cross_entropy_loss_weakly(segment_prob, Segmentation[:, 0, ...])
             assert lossCE.requires_grad
 
-            if mode == 0:
+            if mode == 0 or i <= 1:
                 lossEpoch = lossCE
                 lossValSize.append(0)
             else:
@@ -164,7 +164,7 @@ def runTraining(args):
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument('--epochs', default=10000, type=int)
+    parser.add_argument('--epochs', default=250, type=int)
     parser.add_argument('--mode', default=0, type=int)
     args = parser.parse_args()
     runTraining(args)
