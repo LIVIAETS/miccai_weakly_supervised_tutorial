@@ -98,8 +98,8 @@ def runTraining(args):
         lossValSize = []
         sizeDiff = []
 
-        desc = f">> Training   ({i})"
-        tq_iter = tqdm_(enumerate(train_loader), desc=desc)
+        desc = f">> Training   ({i: 4d})"
+        tq_iter = tqdm_(enumerate(train_loader), total=len(train_loader), desc=desc)
         for j, data in tq_iter:
             image, labels, img_names = data
 
@@ -118,7 +118,7 @@ def runTraining(args):
             lossCE = cross_entropy_loss_weakly(segment_prob, Segmentation[:, 0, ...])
             assert lossCE.requires_grad
 
-            if mode == 0 or i <= 2:  # Trick to handle the fact that we have only 10 training samples
+            if mode == 0 or i <= 2:  # Trick to handle the fact that we kept only 10 training samples
                 lossEpoch = lossCE
                 lossValSize.append(0)
             else:
@@ -129,15 +129,17 @@ def runTraining(args):
 
                 lossValSize.append(sizeLoss_val.item())
 
-            # net.zero_grad()
             lossEpoch.backward()
             optimizer.step()
 
             lossValCE.append(lossCE.item())
 
-            tq_iter.set_postfix({"SizeDiff": f"{np.mean(sizeDiff):6.1f}",
+            tq_iter.set_postfix({"SizeDiff": f"{np.mean(sizeDiff):07.1f}",
                                  "LossCE": f"{np.mean(lossValCE):5.2e}",
                                  **({"LossSize": f"{np.mean(lossValSize):5.2e}"} if mode == 1 else {})})
+
+            tq_iter.update(1)
+        tq_iter.close()
 
         sizeDifferences.append(np.mean(sizeDiff))
         Losses_CE.append(np.mean(lossValCE))

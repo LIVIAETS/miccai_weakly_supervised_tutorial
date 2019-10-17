@@ -1,14 +1,11 @@
 #!/usr/bin/env bash
 
-# Requires imagemagick
+# Requires ImageMagick
 
 f1=Results/Images/Weakly_Sup_CE_Loss
 f2=Results/Images/Weakly_Sup_CE_Loss_SizePenalty
 
 echo $f1 $f2
-
-# convert Results/Images/Weakly_Sup_CE_Loss/0_Ep_*.png Results/Images/CE_loss_0.gif
-# convert Results/Images/Weakly_Sup_CE_Loss_SizePenalty/0_Ep_*.png Results/Images/CE_loss_size_0.gif
 
 rm -rf tmp/ && mkdir -p tmp/
 

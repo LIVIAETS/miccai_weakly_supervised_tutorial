@@ -17,13 +17,11 @@ class shallowCNN(nn.Module):
         super(shallowCNN, self).__init__()
         self.conv0 = convBatch(nin, nG * 4)
         self.conv1 = convBatch(nG * 4, nG * 4)
-        # self.conv2 = convBatch(nG * 4, nG * 4)
-        self.conv3 = convBatch(nG * 4, nout)
+        self.conv2 = convBatch(nG * 4, nout)
 
     def forward(self, input):
         x0 = self.conv0(input)
         x1 = self.conv1(x0)
-        # x2 = self.conv2(x1)
-        x3 = self.conv3(x1)
+        x2 = self.conv2(x1)
 
-        return x3
+        return x2

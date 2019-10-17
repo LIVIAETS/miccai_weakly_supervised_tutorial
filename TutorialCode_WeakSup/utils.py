@@ -10,9 +10,9 @@ import torch.nn as nn
 from tqdm import tqdm
 from torch import Tensor
 
-tqdm_ = partial(tqdm, ncols=175,
+tqdm_ = partial(tqdm, ncols=150,
                 leave=True,
-                bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [' '{rate_fmt}{postfix}]')
+                bar_format='{l_bar}{bar}| {n_fmt}/{total_fmt} [{rate_fmt}{postfix}]')
 
 
 def weights_init(m):
@@ -95,7 +95,7 @@ def saveImages(net, img_batch, batch_size, epoch, modelName):
     net.eval()
     softMax = nn.Softmax()
 
-    desc = f">> Validation ({epoch})"
+    desc = f">> Validation ({epoch: 4d})"
     tq_iter = tqdm_(enumerate(img_batch), desc=desc)
     for i, data in tq_iter:
         # printProgressBar(i, total, prefix="Saving images.....", length=30)
