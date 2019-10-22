@@ -1,6 +1,8 @@
-# Important:
-## Slides employed during the tutorial will be very soon released (we are waiting for permission from authors to share their images)
-## We are working on a survey that will compile all the works on weakly and semi-supervised segmentation with deep models, which will be on arxiv within the next weeks.
+```diff
+# -Important:
+## -Slides employed during the tutorial will be very soon released (we are waiting for permission from authors to share their images)
+## -We are working on a survey that will compile all the works on weakly and semi-supervised segmentation with deep models, which will be on arxiv within the next weeks.
+```
 # Code demo for the weakly supervised segmentation tutorial at MICCAI 2019
 
 ![comparison](comparison.gif)
