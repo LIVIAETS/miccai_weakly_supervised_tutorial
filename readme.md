@@ -11,7 +11,7 @@
 ## Requirements
 This code was written for Python 3.5+. Most of the required packages include:
 ```
-pytorch (tested with 1.2 and 1.3)
+pytorch (tested with 0.4.0)
 torchvision
 numpy
 scipy
@@ -22,7 +22,7 @@ PIL
 `ImageMagick` (available by default on most Linux distributions) is required for the optional script generating the GIF displayed above.
 
 ## Usage
-The current version is implemented on python 2.7 and pytorch 0.4.0
+The current version is implemented on python 3.5 and pytorch 0.4.0
 ```bash
 python 7-WeaklySup_Segmentation.py --mode 0
 python 7-WeaklySup_Segmentation.py --mode 1
