@@ -22,6 +22,14 @@ PIL
 `ImageMagick` (available by default on most Linux distributions) is required for the optional script generating the GIF displayed above.
 
 ## Usage
+The current version is implemented on python 2.7 and pytorch 0.4.0
+```bash
+python 7-WeaklySup_Segmentation.py --mode 0
+python 7-WeaklySup_Segmentation.py --mode 1
+python plotResults.py
+./gifs.sh
+```
+For the old version:
 ```bash
 python3 -O 7-WeaklySup_Segmentation.py --mode 0
 python3 -O 7-WeaklySup_Segmentation.py --mode 1
