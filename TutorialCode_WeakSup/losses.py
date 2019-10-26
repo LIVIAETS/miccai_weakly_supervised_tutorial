@@ -6,22 +6,11 @@ import torchvision
 import numpy as np
 import pdb
 
-<<<<<<< HEAD
-
 ######### ------ Cross-entropy + softmax loss function ---------- ###########
 '''
    Cross-entropy loss (with softmax) for weakly supervised labels
    Unlike in the fully supervised case, pixels not included in the weak label
    are masked, and thus the cross-entropy is only computed for annotated pixels
-=======
-from operator import mul
-from functools import reduce
-
-from torch import einsum
-
-from .utils import simplex, sset
->>>>>>> Add normalization for sizeloss
-
    deriv of Softmax -> softmax - ground truth
 '''
 class CE_Loss_Weakly(torch.autograd.Function):
