@@ -6,12 +6,21 @@ import torchvision
 import numpy as np
 import pdb
 
+<<<<<<< HEAD
 
 ######### ------ Cross-entropy + softmax loss function ---------- ###########
 '''
    Cross-entropy loss (with softmax) for weakly supervised labels
    Unlike in the fully supervised case, pixels not included in the weak label
    are masked, and thus the cross-entropy is only computed for annotated pixels
+=======
+from operator import mul
+from functools import reduce
+
+from torch import einsum
+
+from .utils import simplex, sset
+>>>>>>> Add normalization for sizeloss
 
    deriv of Softmax -> softmax - ground truth
 '''
@@ -21,7 +30,7 @@ class CE_Loss_Weakly(torch.autograd.Function):
         self.save_for_backward(input, target, weakLabels)
         eps = 1e-10
         numPixelsNonMasked = weakLabels.sum()
-        
+
         # -------  Stable softmax  -------
         input_numpy = input.cpu().numpy()
         exps = np.exp(input_numpy - np.max(input_numpy))
@@ -30,7 +39,7 @@ class CE_Loss_Weakly(torch.autograd.Function):
 
         lossT =  torch.FloatTensor(1)
         lossT.fill_(np.float32(loss).item())
-    
+
         return lossT.cuda()   # a single number (averaged loss over batch samples)
 
     def backward(self, grad_output):
@@ -42,7 +51,7 @@ class CE_Loss_Weakly(torch.autograd.Function):
         # Mask the predictions to only annotated pixels
         mask=oneHotLabels
         mask[:,0,:,:]=0
-        
+
         numPixelsNonMasked = weakLabels.sum()
 
 
@@ -51,7 +60,7 @@ class CE_Loss_Weakly(torch.autograd.Function):
         exps = np.exp(input_numpy - np.max(input_numpy))
         softmax_y = exps / (np.sum(exps, axis=1))
         grad_input = (torch.Tensor(softmax_y).cuda() - torch.Tensor(oneHotLabels.cpu().data).cuda())*(torch.Tensor(mask.cpu().data).cuda())/(torch.Tensor(np.array(numPixelsNonMasked.cpu().data.numpy()+eps)).cuda())  # Divide by m or numPixelsNonMasked
-      
+
         return grad_input.cuda(), None, None
 
 
@@ -86,11 +95,11 @@ class Size_Loss_naive(torch.autograd.Function):
         input, target = self.saved_variables
 
         m = input.shape[2]*input.shape[3]
-        
+
         # Softmax  (It can be saved with save_for_backward??)
         softmax_y = input.cpu().data.numpy()
         softB = softmax_y[:,1,:,:]
-        
+
         pixelsClassB = np.where( softB > 0.5 )
         sizePred = len(pixelsClassB[0])
         # Small circle = 7845
@@ -98,9 +107,8 @@ class Size_Loss_naive(torch.autograd.Function):
 
         grad_inputA = np.zeros((softmax_y.shape[0],1,softmax_y.shape[2],softmax_y.shape[3]),dtype='float32')
         grad_inputB = np.zeros((softmax_y.shape[0],1,softmax_y.shape[2],softmax_y.shape[3]),dtype='float32')
-        
+
         grad_inputB.fill(2 * (sizePred-sizeGT)/(100*m))
         grad_input = np.concatenate((grad_inputA,grad_inputB), 1)
 
         return torch.Tensor(grad_input).cuda(), None
-
