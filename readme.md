@@ -63,4 +63,4 @@ If you are re-using this code in your research, and the material from this tutor
 
 `Hoel Kervadec, Jose Dolz, Meng Tang, Eric Granger, Yuri Boykov, and Ismail Ben Ayed. "Constrained-CNN losses for weakly supervised segmentation." Medical image analysis 54 (2019): 88-99`.
 
-`Ismail Ben Ayed, Christian Desrosiers and Jose Dolz. "Weakly Supervised CNN Segmentation: Models and Optimization."Medical Image Computing and Computer Assisted Intervention − MICCAI 2019 Tutorial. 
+`Ismail Ben Ayed, Christian Desrosiers and Jose Dolz. "Weakly Supervised CNN Segmentation: Models and Optimization."Medical Image Computing and Computer Assisted Intervention − MICCAI 2019 Tutorial`. 
