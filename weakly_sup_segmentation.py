@@ -10,16 +10,16 @@ from torch import einsum
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-from TutorialCode_WeakSup.medicalDataLoader import (MedicalImageDataset)
-from TutorialCode_WeakSup.ShallowNet import (shallowCNN)
-from TutorialCode_WeakSup.utils import (weights_init,
-                                        saveImages,
-                                        probs2one_hot,
-                                        sset,
-                                        tqdm_)
+from utils.medicalDataLoader import (MedicalImageDataset)
+from utils.ShallowNet import (shallowCNN)
+from utils.utils import (weights_init,
+                         saveImages,
+                         probs2one_hot,
+                         sset,
+                         tqdm_)
 
-from TutorialCode_WeakSup.losses import (Size_Loss_naive,
-                                         CE_Loss_Weakly)
+from utils.losses import (Size_Loss_naive,
+                          CE_Loss_Weakly)
 
 
 def runTraining(args):
@@ -34,7 +34,7 @@ def runTraining(args):
     epoch = args.epochs
     circle_size = 7845
     mode = args.mode  # 0-> Only CE   1 -> CE + Size loss
-    root_dir = 'TutorialCode_WeakSup/Data/ToyExample'
+    root_dir = 'data/ToyExample'
 
     if mode == 0:
         modelName = 'Weakly_Sup_CE_Loss'

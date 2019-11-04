@@ -47,9 +47,12 @@ class Size_Loss_naive():
     def __call__(self, input):
         assert simplex(input)
 
+        _, _, h, w = input.shape
+
         pred_size = einsum("bcwh->bc", input)[:, 1]
         target_size = 7845
 
         loss = (pred_size - target_size) ** 2
+        loss = loss / (w * h)
 
-        return loss.mean() / 1000000
+        return loss / 100
