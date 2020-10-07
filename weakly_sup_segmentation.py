@@ -110,7 +110,7 @@ def runTraining(args):
             assert sset(Segmentation, [0, 1])
 
             segmentation_prediction = net(MRI)
-            segment_prob = softMax(segmentation_prediction)
+            segment_prob = softMax(5 * segmentation_prediction)
 
             pred_circle_size = einsum("bcwh->bc", probs2one_hot(segment_prob))[:, 1]
             sizeDiff.append((pred_circle_size - circle_size).abs().float().mean())
