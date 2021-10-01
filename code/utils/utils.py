@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
 
+import warnings
 from pathlib import Path
 from functools import partial
 from multiprocessing import Pool
@@ -11,6 +12,7 @@ import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
+from skimage.io import imsave
 from torch import Tensor, einsum
 
 tqdm_ = partial(tqdm, ncols=125,
@@ -105,6 +107,21 @@ def probs2one_hot(probs: Tensor) -> Tensor:
     return res
 
 
+# Save the raw predictions
+def save_images(segs: Tensor, names: Iterable[str], root: Path) -> None:
+        for seg, name in zip(segs, names):
+                save_path = (root / name).with_suffix(".png")
+                save_path.parent.mkdir(parents=True, exist_ok=True)
+
+                if len(seg.shape) == 2:
+                        imsave(str(save_path), seg.detach().cpu().numpy().astype(np.uint8))
+                elif len(seg.shape) == 3:
+                        np.save(str(save_path), seg.detach().cpu().numpy())
+                else:
+                        raise ValueError("How did you get here")
+
+
+# Save a fancy looking figure
 def saveImages(net, img_batch, batch_size, epoch, dataset, mode, device):
     path = Path('results/images/') / dataset / mode
     path.mkdir(parents=True, exist_ok=True)
@@ -115,31 +132,41 @@ def saveImages(net, img_batch, batch_size, epoch, dataset, mode, device):
 
     log_dice = torch.zeros((len(img_batch)), device=device)
 
-    tq_iter = tqdm_(enumerate(img_batch), total=len(img_batch), desc=desc)
-    for j, data in tq_iter:
-        img = data["img"].to(device)
-        weak_mask = data["weak_mask"].to(device)
-        full_mask = data["full_mask"].to(device)
+    with warnings.catch_warnings():
+        warnings.filterwarnings("ignore", category=UserWarning)
 
-        logits = net(img)
-        probs = F.softmax(5 * logits, dim=1)
+        tq_iter = tqdm_(enumerate(img_batch), total=len(img_batch), desc=desc)
+        for j, data in tq_iter:
+            img = data["img"].to(device)
+            weak_mask = data["weak_mask"].to(device)
+            full_mask = data["full_mask"].to(device)
 
-        segmentation = probs2class(probs)[:, None, ...].float()
-        log_dice[j] = dice_coef(probs2one_hot(probs), full_mask)[0, 1]  # 1st item, 2nd class
+            logits = net(img)
+            probs = F.softmax(5 * logits, dim=1)
 
-        out = torch.cat((img, segmentation, weak_mask[:, [1], ...]))
+            segmentation = probs2class(probs)[:, None, ...].float()
+            log_dice[j] = dice_coef(probs2one_hot(probs), full_mask)[0, 1]  # 1st item, 2nd class
 
-        torchvision.utils.save_image(out.data, path / f"{j}_Ep_{epoch:04d}.png",
-                                     nrow=batch_size,
-                                     padding=2,
-                                     normalize=False,
-                                     range=None,
-                                     scale_each=False,
-                                     pad_value=0)
+            out = torch.cat((img, segmentation, weak_mask[:, [1], ...]))
 
-        tq_iter.set_postfix({"DSC": f"{log_dice[:j+1].mean():05.3f}"})
-        tq_iter.update(1)
-    tq_iter.close()
+            torchvision.utils.save_image(out.data, path / f"{j}_Ep_{epoch:04d}.png",
+                                         nrow=batch_size,
+                                         padding=2,
+                                         normalize=False,
+                                         range=None,
+                                         scale_each=False,
+                                         pad_value=0)
+
+            predicted_class: Tensor = probs2class(probs)
+            filenames: List[str] = [Path(p).stem for p in data["path"]]
+
+            save_images(predicted_class,
+                        filenames,
+                        Path("results/raw_images") / mode / f"iter{epoch:03d}")
+
+            tq_iter.set_postfix({"DSC": f"{log_dice[:j+1].mean():05.3f}"})
+            tq_iter.update(1)
+        tq_iter.close()
 
 
 # Metrics

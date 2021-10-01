@@ -159,7 +159,7 @@ def runTraining(args):
 def main():
     parser = argparse.ArgumentParser()
 
-    parser.add_argument('--epochs', default=200, type=int)
+    parser.add_argument('--epochs', default=30, type=int)
     parser.add_argument('--dataset', default='TOY2', choices=['TOY2'])
     parser.add_argument('--mode', default='quadratic', choices=['quadratic', 'logbarrier'])
 
