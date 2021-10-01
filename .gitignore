@@ -1,8 +1,10 @@
-Results/
-result.gif
-tmp/
+code/result.gif
+code/results/
+code/tmp/
 
-
+code/data/TOY
+code/data/promise12
+code/data/PROMISE12
 
 *.zip
 *.pkl
