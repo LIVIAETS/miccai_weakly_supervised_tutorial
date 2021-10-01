@@ -1,34 +1,21 @@
-# MICCAI 2020 Tutorial
+# MICCAI 2021 Tutorial
 ## Weakly Supervised CNN Segmentation: Models and Optimization
 
-This repository contains the code of the hand-on tutorial, that runs on two datasets:
-* A very simple toy example
-* [PROMISE12](https://promise12.grand-challenge.org) prostate segmentation challenge
-
-Also founds, the slides and recordings of the tutorial.
-
-### Slides
-Slides from the three sessions are available in the [`slides/`](slides/) folder.
-
-
-### Recordings
-* [Session 1](https://drive.google.com/file/d/1NVn2J4y6l7_Yxw6RGBD2CEIEedliccjQ/view?usp=sharing): Structure-driven priors: _Regularization_
-* [Session 2](https://drive.google.com/file/d/1wAVxBk4U45-SZhDWviCgFShytf0wrJze/view?usp=sharing): Knowledge-driven priors (e.g., anatomy): _Constraints_
-* [Session 3](https://drive.google.com/file/d/1EohLWWa5vMmEMxw3Rqk4eYaDzbr_Clp2/view?usp=sharing): Data-driven priors: _Adversarial learning_
-* [Session 4](https://drive.google.com/file/d/1NMU7z0KhXYX6idgCBehdaNVAifOE6Ey3/view?usp=sharing): Hands-on: _Size constraints_
-
-
+This repository contains the code of the hand-on tutorial. The hands-on will be done in three main parts:
+* **naive sizeloss**, to introduce the pipeline and general methodology;
+* **combined size and centroid supervision**, with a quadratic penalty;
+* combined size and centroid supervision, **with an extended log-barrier**.
 
 ### Hands-on
 ![preview.gif](preview.gif)
 
-The goal here is to enforce some inequality constraints on the size of the predicted segmentation in the form:
+The first goal is to enforce some inequality constraints on the size of the predicted segmentation in the form:
 ```
 lower bound <= predicted size <= upper bound
 ```
 where `predicted size` is the sum of all predicted probabilities (softmax) over the whole image.
 
-To make the example simpler, we will define the lower and upper bounds to 0.9 and 1.1 times the ground truth size. All the code is contained within the `code` folder
+To make the example simpler, we will define the lower and upper bounds to 0.9 and 1.1 times the ground truth size. All the code is contained within the `code/` folder. **The following assume you moved in that directory.**
 
 #### Requirements
 The code has those following dependencies:
@@ -50,6 +37,7 @@ PIL
 The data for the toy example is stored in `code/data/TOY`. If you wish, you can regenerate the dataset with:
 ```
 make -B data/TOY
+make -B data/TOY2
 ```
 or you can use [gen_toy.py](code/gen_toy.py) directly.
 
@@ -88,3 +76,15 @@ The three modes correspond to:
 * full: use full labels, with cross entropy (will learn, for obvious reasons)
 
 The settings for PROMISE12 are too simple to get state of the art results, even in the `full` mode, but it gives a good starting point for new practitioners to then build on.
+
+## MICCAI 2020 recordings
+While the recording and slides are not yet available, the ones from last year are still online.
+
+### Slides
+Slides from the three sessions are available in the [`slides/`](slides/) folder.
+
+### Recordings
+* [Session 1](https://drive.google.com/file/d/1NVn2J4y6l7_Yxw6RGBD2CEIEedliccjQ/view?usp=sharing): Structure-driven priors: _Regularization_
+* [Session 2](https://drive.google.com/file/d/1wAVxBk4U45-SZhDWviCgFShytf0wrJze/view?usp=sharing): Knowledge-driven priors (e.g., anatomy): _Constraints_
+* [Session 3](https://drive.google.com/file/d/1EohLWWa5vMmEMxw3Rqk4eYaDzbr_Clp2/view?usp=sharing): Data-driven priors: _Adversarial learning_
+* [Session 4](https://drive.google.com/file/d/1NMU7z0KhXYX6idgCBehdaNVAifOE6Ey3/view?usp=sharing): Hands-on: _Size constraints_
