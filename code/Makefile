@@ -2,7 +2,10 @@
 data/TOY:
 	python gen_toy.py --dest $@ -n 10 10 -wh 256 256 -r 50
 
-data/PROMISE12:
+data/TOY2:
+	rm -rf $@_tmp $@
+	python gen_two_circles.py --dest $@_tmp -n 1000 100 -r 25 -wh 256 256
+	mv $@_tmp $@
 
 # Extraction and slicing
 data/PROMISE12: data/promise12
