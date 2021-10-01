@@ -7,6 +7,7 @@ from typing import Callable, Iterable, List, Set, Tuple, TypeVar, cast
 
 import torch
 import torchvision
+import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
 from tqdm import tqdm
@@ -179,3 +180,38 @@ def union(a: Tensor, b: Tensor) -> Tensor:
     assert sset(res, [0, 1])
 
     return res
+
+
+# Functions to supervise
+def soft_size(a: Tensor) -> Tensor:
+    return einsum("bkwh->bk", a)
+
+
+def soft_centroid(a: Tensor) -> Tensor:
+        b, k, w, h = a.shape
+
+        # Generate all coordinates, on each axis
+        grids = np.mgrid[0:w, 0:h]
+        # for instance, this gives for a 256x256 img
+        # produces two arrays of 256x256, containing the x and y coordinates for each pixel
+
+        # tensor_grids = map_(lambda e: torch.tensor(e).to(a.device).type(torch.float32), grids)
+        tensor_grids = [torch.tensor(g, dtype=torch.float32).to(a.device) for g in grids]
+
+        # Make sure all grids have the same shape as img_shape
+        assert all(tuple(t.shape) == (w, h)
+                   for t in tensor_grids)
+
+        flotted = a.type(torch.float32)
+        tot = einsum("bk...->bk", flotted) + 1e-10
+        assert tot.dtype == torch.float32
+
+        centroids = [einsum("bkwh,wh->bk", flotted, grid) / tot
+                     for grid in tensor_grids]
+        assert all(e.dtype == torch.float32 for e in centroids), map_(lambda e: e.dtype, centroids)
+
+        res = torch.stack(centroids, dim=2)
+        assert res.shape == (b, k, 2)
+        assert res.dtype == torch.float32
+
+        return res

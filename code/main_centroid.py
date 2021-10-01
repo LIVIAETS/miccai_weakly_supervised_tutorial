@@ -2,30 +2,30 @@
 
 import argparse
 from pathlib import Path
-from typing import Any, Tuple
+from typing import Any, Callable, Tuple
 from operator import itemgetter
 
 import torch
 import numpy as np
 import torch.nn.functional as F
+from torch import Tensor
 from torch import nn, einsum
 from torchvision import transforms
 from torch.utils.data import DataLoader
 
 from utils.dataset import (SliceDataset)
 from utils.ShallowNet import (shallowCNN)
-from utils.residual_unet import ResidualUNet
 from utils.utils import (weights_init,
                          saveImages,
                          class2one_hot,
                          probs2one_hot,
-                         one_hot,
                          tqdm_,
-                         dice_coef)
+                         dice_coef,
+                         soft_size,
+                         soft_centroid)
 
-from utils.losses import (CrossEntropy,
-                          PartialCrossEntropy,
-                          NaiveSizeLoss)
+from utils.losses import (ParametrableQuadraticPenalty,
+                          ParametrableLogBarrier)
 
 
 def setup(args) -> Tuple[nn.Module, Any, Any, DataLoader, DataLoader]:
@@ -34,15 +34,13 @@ def setup(args) -> Tuple[nn.Module, Any, Any, DataLoader, DataLoader]:
     device = torch.device("cuda") if gpu else torch.device("cpu")
 
     num_classes = 2
-    if args.dataset == 'TOY':
+    if args.dataset == 'TOY2':
         initial_kernels = 4
         print(">> Using a shallowCNN")
         net = shallowCNN(1, initial_kernels, num_classes)
         net.apply(weights_init)
     else:
-        print(">> Using a fully residual UNet")
-        net = ResidualUNet(1, num_classes)
-        net.init_weights()
+        raise ValueError(args.dataset)
     net.to(device)
 
     lr = 0.0005
@@ -95,16 +93,18 @@ def runTraining(args):
     print(f">>> Setting up to train on {args.dataset} with {args.mode}")
     net, optimizer, device, train_loader, val_loader = setup(args)
 
-    ce_loss = CrossEntropy(idk=[0, 1])  # Supervise both background and foreground
-    partial_ce = PartialCrossEntropy()  # Supervise only foregroundz
-    sizeLoss = NaiveSizeLoss()
+    Loss_Size: Callable[[Tensor, Tensor], Tensor]
+    Loss_Centroid: Callable[[Tensor, Tensor], Tensor]
+    if args.mode == "quadratic":
+        Loss_Size = ParametrableQuadraticPenalty(function=soft_size)
+        Loss_Centroid = ParametrableQuadraticPenalty(function=soft_centroid)
+    elif args.mode == "logbarrier":
+        Loss_Size = ParametrableLogBarrier(function=soft_size)
+        Loss_Centroid = ParametrableLogBarrier(function=soft_centroid)
 
     for i in range(args.epochs):
         net.train()
 
-        log_ce = torch.zeros((len(train_loader)), device=device)
-        log_sizeloss = torch.zeros((len(train_loader)), device=device)
-        log_sizediff = torch.zeros((len(train_loader)), device=device)
         log_dice = torch.zeros((len(train_loader)), device=device)
 
         desc = f">> Training   ({i: 4d})"
@@ -112,59 +112,45 @@ def runTraining(args):
         for j, data in tq_iter:
             img = data["img"].to(device)
             full_mask = data["full_mask"].to(device)
-            weak_mask = data["weak_mask"].to(device)
-
-            bounds = data["bounds"].to(device)
-
-            optimizer.zero_grad()
 
             # Sanity tests to see we loaded and encoded the data correctly
             assert 0 <= img.min() and img.max() <= 1
             B, _, W, H = img.shape
+            _, K, _, _ = full_mask.shape
             assert B == 1  # Since we log the values in a simple way, doesn't handle more
-            assert weak_mask.shape == (B, 2, W, H)
-            assert one_hot(weak_mask), one_hot(weak_mask)
+
+            true_size: Tensor = soft_size(full_mask)[..., None]  # Add an extra axis
+            assert true_size.shape == (B, K, 1)  # last one is dimensionality of the value computed (size)
+            true_centroid: Tensor = soft_centroid(full_mask)
+            assert true_centroid.shape == (B, K, 2)  # Dimensionality is two for the centroid (two axis)
+
+            bounds_size = einsum("bkm,u->bkmu", true_size, torch.tensor([0.9, 1.1],
+                                                                        dtype=torch.float32,
+                                                                        device=true_size.device))
+            bounds_centroid = einsum("bkm,u->bkmu", true_centroid, torch.tensor([0.9, 1.1],
+                                                                                dtype=torch.float32,
+                                                                                device=true_size.device))
+
+            optimizer.zero_grad()
 
             logits = net(img)
             pred_softmax = F.softmax(5 * logits, dim=1)
             pred_seg = probs2one_hot(pred_softmax)
 
-            pred_size = einsum("bkwh->bk", pred_seg)[:, 1]
-            log_sizediff[j] = pred_size - data["true_size"][0, 1]
             log_dice[j] = dice_coef(pred_seg, full_mask)[0, 1]  # 1st item, 2nd class
 
-            if args.mode == 'full':
-                ce_val = ce_loss(pred_softmax, full_mask)
-                log_ce[j] = ce_val.item()
+            combined_loss = Loss_Size(pred_softmax, bounds_size) + Loss_Centroid(pred_softmax, bounds_centroid)
 
-                log_sizeloss[j] = 0
-
-                lossEpoch = ce_val
-            elif args.mode == 'unconstrained':
-                ce_val = partial_ce(pred_softmax, weak_mask)
-                log_ce[j] = ce_val.item()
-
-                log_sizeloss[j] = 0
-
-                lossEpoch = ce_val
-            else:
-                ce_val = partial_ce(pred_softmax, weak_mask)
-                log_ce[j] = ce_val.item()
-
-                sizeLoss_val = sizeLoss(pred_softmax, bounds)
-                log_sizeloss[j] = sizeLoss_val.item()
-
-                lossEpoch = ce_val + sizeLoss_val / 100
-
-            lossEpoch.backward()
+            combined_loss.backward()
             optimizer.step()
 
-            tq_iter.set_postfix({"DSC": f"{log_dice[:j+1].mean():05.3f}",
-                                 "SizeDiff": f"{log_sizediff[:j+1].mean():07.1f}",
-                                 "LossCE": f"{log_ce[:j+1].mean():5.2e}",
-                                 **({"LossSize": f"{log_sizeloss[:j+1].mean():5.2e}"} if args.mode == 'constrained' else {})})
+            tq_iter.set_postfix({"DSC": f"{log_dice[:j+1].mean():05.3f}"})
             tq_iter.update(1)
         tq_iter.close()
+
+        if args.mode == "logbarrier":
+            Loss_Size.t *= 1.1
+            Loss_Centroid.t *= 1.1
 
         if (i % 5) == 0:
             saveImages(net, val_loader, 1, i, args.dataset, args.mode, device)
@@ -174,8 +160,8 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--epochs', default=200, type=int)
-    parser.add_argument('--dataset', default='TOY', choices=['TOY', 'PROMISE12'])
-    parser.add_argument('--mode', default='unconstrained', choices=['constrained', 'unconstrained', 'full'])
+    parser.add_argument('--dataset', default='TOY2', choices=['TOY2'])
+    parser.add_argument('--mode', default='quadratic', choices=['quadratic', 'logbarrier'])
 
     parser.add_argument('--gpu', action='store_true')
 

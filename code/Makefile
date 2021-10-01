@@ -5,6 +5,8 @@ data/TOY:
 data/TOY2:
 	rm -rf $@_tmp $@
 	python gen_two_circles.py --dest $@_tmp -n 1000 100 -r 25 -wh 256 256
+	cp -r $@_tmp/train/gt $@_tmp/train/weak  # Not used but makes the code easier
+	cp -r $@_tmp/val/gt $@_tmp/val/weak
 	mv $@_tmp $@
 
 # Extraction and slicing
