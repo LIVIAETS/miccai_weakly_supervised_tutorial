@@ -28,21 +28,28 @@ from utils.losses import (CrossEntropy,
                           NaiveSizeLoss)
 
 
-def setup(args) -> Tuple[nn.Module, Any, Any, DataLoader, DataLoader]:
+def setup(args) -> Tuple[nn.Module, Any, Any, DataLoader, DataLoader, int]:
     # Networks and scheduler
     gpu: bool = args.gpu and torch.cuda.is_available()
     device = torch.device("cuda") if gpu else torch.device("cpu")
+    print(f">> Picked {device} to run experiments")
 
-    num_classes = 2
+    K = 2  # K for the number of classes
+    # Avoids the clases with C (often used for the number of Channel)
     if args.dataset == 'TOY':
         initial_kernels = 4
         print(">> Using a shallowCNN")
-        net = shallowCNN(1, initial_kernels, num_classes)
+        net = shallowCNN(1, initial_kernels, K)
         net.apply(weights_init)
-    else:
-        print(">> Using a fully residual UNet")
-        net = ResidualUNet(1, num_classes)
+    elif args.dataset == 'PROMISE12':
+        print(f">> Using a fully residual UNet for {args.dataset}")
+        net = ResidualUNet(1, K)
         net.init_weights()
+    else:
+        print(f">> Using a fully residual UNet for {args.dataset}")
+        net = ResidualUNet(1, K)
+        net.init_weights()
+        K = 4
     net.to(device)
 
     lr = 0.0005
@@ -61,9 +68,11 @@ def setup(args) -> Tuple[nn.Module, Any, Any, DataLoader, DataLoader]:
 
     mask_transform = transforms.Compose([
         lambda img: np.array(img)[...],
-        lambda nd: nd / 255,  # max <= 1
+        # The idea is that the classes are mapped to {0, 255} for binary cases
+        # and {0, 85, 170, 255} for 4 classes
+        lambda nd: nd / (255 / (K - 1)),  # max <= 1
         lambda nd: torch.tensor(nd, dtype=torch.int64)[None, ...],  # Add one dimension to simulate batch
-        lambda t: class2one_hot(t, K=2),
+        lambda t: class2one_hot(t, K=K),
         itemgetter(0)
     ])
 
@@ -88,14 +97,14 @@ def setup(args) -> Tuple[nn.Module, Any, Any, DataLoader, DataLoader]:
                             num_workers=5,
                             shuffle=False)
 
-    return (net, optimizer, device, train_loader, val_loader)
+    return (net, optimizer, device, train_loader, val_loader, K)
 
 
 def runTraining(args):
     print(f">>> Setting up to train on {args.dataset} with {args.mode}")
-    net, optimizer, device, train_loader, val_loader = setup(args)
+    net, optimizer, device, train_loader, val_loader, K = setup(args)
 
-    ce_loss = CrossEntropy(idk=[0, 1])  # Supervise both background and foreground
+    ce_loss = CrossEntropy(idk=list(range(K)))  # Supervise both background and foreground
     partial_ce = PartialCrossEntropy()  # Supervise only foregroundz
     sizeLoss = NaiveSizeLoss()
 
@@ -122,7 +131,7 @@ def runTraining(args):
             assert 0 <= img.min() and img.max() <= 1
             B, _, W, H = img.shape
             assert B == 1  # Since we log the values in a simple way, doesn't handle more
-            assert weak_mask.shape == (B, 2, W, H)
+            assert weak_mask.shape == (B, K, W, H)
             assert one_hot(weak_mask), one_hot(weak_mask)
 
             logits = net(img)
@@ -174,7 +183,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--epochs', default=200, type=int)
-    parser.add_argument('--dataset', default='TOY', choices=['TOY', 'PROMISE12'])
+    parser.add_argument('--dataset', default='TOY', choices=['TOY', 'PROMISE12', 'ACDC'])
     parser.add_argument('--mode', default='unconstrained', choices=['constrained', 'unconstrained', 'full'])
 
     parser.add_argument('--gpu', action='store_true')
