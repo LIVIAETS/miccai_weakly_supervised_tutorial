@@ -7,12 +7,13 @@ import warnings
 from pathlib import Path
 from pprint import pprint
 from functools import partial
-from typing import Any, Callable, Tuple
+from typing import Any, Callable, List, Tuple
 
 import numpy as np
 import nibabel as nib
 from tqdm import tqdm
 from skimage.io import imsave
+from PIL import Image, ImageDraw
 from numpy import unique as uniq
 from skimage.transform import resize
 
@@ -81,6 +82,7 @@ def save_slices(img_p: Path, gt_p: Path,
 
     save_dir_img: Path = Path(dest_dir, img_dir)
     save_dir_gt: Path = Path(dest_dir, gt_dir)
+    save_dir_weak: Path = Path(dest_dir, "weak")
     sizes_2d: np.ndarray = np.zeros(img.shape[-1])
     for j in range(img.shape[-1]):
         img_s = norm_img[:, :, j]
@@ -98,11 +100,17 @@ def save_slices(img_p: Path, gt_p: Path,
         assert 0 <= r_img.min() and r_img.max() <= 255  # The range might be smaller
         sizes_2d[j] = (r_gt == 3).astype(np.int64).sum()
 
-        assert set(np.unique(r_gt)) <= set([0, 1, 2, 3])
-        r_gt *= 255 // 3
-        assert set(np.unique(r_gt)) <= set([0, 85, 170, 255])
+        # Don't do it for the background
+        r_weak: np.ndarray = random_strat(r_gt, [1, 2, 3])
 
-        for save_dir, data in zip([save_dir_img, save_dir_gt], [r_img, r_gt]):
+        assert set(np.unique(r_gt)) <= set([0, 1, 2, 3])
+        assert set(np.unique(r_weak)) <= set([0, 1, 2, 3])
+        r_gt *= 255 // 3
+        r_weak *= 255 // 3
+        assert set(np.unique(r_gt)) <= set([0, 85, 170, 255])
+        assert set(np.unique(r_weak)) <= set([0, 85, 170, 255])
+
+        for save_dir, data in zip([save_dir_img, save_dir_gt, save_dir_weak], [r_img, r_gt, r_weak]):
             filename = f"{p_id}_{f_id}_{j:02d}.png"
             save_dir.mkdir(parents=True, exist_ok=True)
             save_path = save_dir / filename
@@ -110,6 +118,35 @@ def save_slices(img_p: Path, gt_p: Path,
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning)
                 imsave(str(save_path), data)
+
+
+def random_strat(orig_mask: np.ndarray, classes: List[int]) -> np.ndarray:
+    res_arr: np.ndarray = np.zeros_like(orig_mask)
+
+    for k in classes:
+        class_nask: np.ndarray = orig_mask == k
+        size: int = class_nask.sum()
+        if size:  # Positive images
+            res_img: Image.Image = Image.new("L", res_arr.shape, 0)
+            canvas = ImageDraw.Draw(res_img)
+            xs, ys = np.where(class_nask == 1)
+            # print(len(xs), len(ys))
+            assert len(xs) == len(ys)
+            random_index: int = np.random.randint(len(xs))
+            rx, ry = xs[random_index], ys[random_index]
+            # Of course the coordinates are inverted
+            # rx, ry = ry, rx
+            # print(centroid, rx, ry)
+
+            width: int = 5  # Hardcoded for now
+            dw: int = int(width // 2)
+            canvas.ellipse([rx - dw, ry - dw, rx + dw, ry + dw], fill=k)
+
+            # Remove overflow if needed
+            masked_res: np.ndarray = np.einsum("hw,wh->wh", np.array(res_img), class_nask).astype(np.uint8)
+            res_arr += masked_res
+
+    return res_arr
 
 
 def main(args: argparse.Namespace):
