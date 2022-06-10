@@ -5,10 +5,11 @@ code/tmp/
 code/data/TOY
 code/data/TOY2
 code/data/*.zip
+code/data/*_tmp
 code/data/promise12
 code/data/PROMISE12
 code/data/acdc
-code/data/ACDC-2D
+code/data/ACDC
 
 *.zip
 *.pkl

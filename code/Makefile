@@ -23,7 +23,7 @@ data/promise12: data/promise12.lineage data/TrainingData_Part1.zip data/Training
 	mv $@_tmp $@
 
 # Extraction and slicing for ACDC
-data/ACDC-2D: data/acdc
+data/ACDC: data/acdc
 	$(info $(yellow)$(CC) $(CFLAGS) preprocess/slice_acdc.py$(reset))
 	rm -rf $@_tmp $@
 	python3 slice_acdc.py --source_dir="data/acdc/training" --dest_dir=$@_tmp \
