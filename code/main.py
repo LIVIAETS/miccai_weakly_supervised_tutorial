@@ -46,10 +46,10 @@ def setup(args) -> Tuple[nn.Module, Any, Any, DataLoader, DataLoader, int]:
         net = ResidualUNet(1, K)
         net.init_weights()
     else:
+        K = 4
         print(f">> Using a fully residual UNet for {args.dataset}")
         net = ResidualUNet(1, K)
         net.init_weights()
-        K = 4
     net.to(device)
 
     lr = 0.0005
@@ -105,8 +105,8 @@ def runTraining(args):
     net, optimizer, device, train_loader, val_loader, K = setup(args)
 
     ce_loss = CrossEntropy(idk=list(range(K)))  # Supervise both background and foreground
-    partial_ce = PartialCrossEntropy()  # Supervise only foregroundz
-    sizeLoss = NaiveSizeLoss()
+    partial_ce = CrossEntropy(idk=list(range(1, K)))  # Don't supervised background
+    sizeLoss = NaiveSizeLoss(idk=list(range(1, K)))
 
     for i in range(args.epochs):
         net.train()
@@ -138,9 +138,11 @@ def runTraining(args):
             pred_softmax = F.softmax(5 * logits, dim=1)
             pred_seg = probs2one_hot(pred_softmax)
 
-            pred_size = einsum("bkwh->bk", pred_seg)[:, 1]
-            log_sizediff[j] = pred_size - data["true_size"][0, 1]
-            log_dice[j] = dice_coef(pred_seg, full_mask)[0, 1]  # 1st item, 2nd class
+            # `1:` for class 1 onward. This way handle both binary and mult-class
+            # 1st item, all classes except background
+            pred_size = einsum("bkwh->bk", pred_seg)[0, 1:].cpu()
+            log_sizediff[j] = (pred_size - data["true_size"][0, 1:]).mean()  # do the class average for simplicity
+            log_dice[j] = dice_coef(pred_seg, full_mask)[0, 1:].mean()
 
             if args.mode == 'full':
                 ce_val = ce_loss(pred_softmax, full_mask)
@@ -161,9 +163,9 @@ def runTraining(args):
                 log_ce[j] = ce_val.item()
 
                 sizeLoss_val = sizeLoss(pred_softmax, bounds)
-                log_sizeloss[j] = sizeLoss_val.item()
+                log_sizeloss[j] = sizeLoss_val[0, 1:].mean()
 
-                lossEpoch = ce_val + sizeLoss_val / 100
+                lossEpoch = ce_val + sizeLoss_val.sum() / 100
 
             lossEpoch.backward()
             optimizer.step()

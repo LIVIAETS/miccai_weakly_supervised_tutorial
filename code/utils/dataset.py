@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 
 from pathlib import Path
-from random import random
 from typing import Callable, Dict, List, Tuple, Union
 
 import torch
@@ -58,12 +57,13 @@ class SliceDataset(Dataset):
             weak_mask = self.mask_transform(weak_mask)
 
         _, W, H = img.shape
-        assert mask.shape == weak_mask.shape == (2, W, H)
+        K, _, _ = mask.shape
+        assert mask.shape == weak_mask.shape == (K, W, H)
 
         # Circle: 8011
-        true_size = einsum("kwh->k", mask)
+        true_size = einsum("kwh->k", mask).type(torch.float32)
         bounds = einsum("k,b->kb", true_size, torch.tensor([0.9, 1.1], dtype=torch.float32))
-        assert bounds.shape == (2, 2)  # binary, upper and lower bounds
+        assert bounds.shape == (K, 2)  # binary, upper and lower bounds
 
         return {"img": img,
                 "full_mask": mask,
