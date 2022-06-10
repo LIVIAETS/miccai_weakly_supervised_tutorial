@@ -32,6 +32,10 @@ simpleitk
 scikit-image
 PIL
 ```
+ACDC relies on, for the slicing:
+```
+nibabel
+```
 
 #### Data
 The data for the toy example is stored in `code/data/TOY`. If you wish, you can regenerate the dataset with:
@@ -51,6 +55,11 @@ It will:
 * slice into 2d slices
 * generate weak labels from the actual ground truth
 
+The same goes for ACDC:
+```
+make data/ACDC
+```
+
 #### Training
 ```
 >>> ./main.py -h
@@ -59,7 +68,7 @@ usage: main.py [-h] [--epochs EPOCHS] [--dataset {TOY,PROMISE12}] [--mode {const
 optional arguments:
   -h, --help            show this help message and exit
   --epochs EPOCHS
-  --dataset {TOY,PROMISE12}
+  --dataset {TOY,PROMISE12,ACDC}
   --mode {constrained,unconstrained,full}
   --gpu
 ```
