@@ -123,8 +123,9 @@ def save_images(segs: Tensor, names: Iterable[str], root: Path) -> None:
 
 # Save a fancy looking figure
 def saveImages(net, img_batch, batch_size, epoch, dataset, mode, device):
-    path = Path('results/images/') / dataset / mode
-    path.mkdir(parents=True, exist_ok=True)
+    base_path = Path('results/') / dataset / mode
+    (base_path / 'grids').mkdir(parents=True, exist_ok=True)  # combination of image, prediction and weak label
+    (base_path / 'predictions').mkdir(parents=True, exist_ok=True)  # un-normalized prediction saved as png
 
     net.eval()
 
@@ -149,7 +150,7 @@ def saveImages(net, img_batch, batch_size, epoch, dataset, mode, device):
 
             out = torch.cat((img, segmentation, weak_mask[:, [1], ...]))
 
-            torchvision.utils.save_image(out.data, path / f"{j}_Ep_{epoch:04d}.png",
+            torchvision.utils.save_image(out.data, base_path / 'grids' / f"{j}_Ep_{epoch:04d}.png",
                                          nrow=batch_size,
                                          padding=2,
                                          normalize=False,
@@ -162,7 +163,7 @@ def saveImages(net, img_batch, batch_size, epoch, dataset, mode, device):
 
             save_images(predicted_class,
                         filenames,
-                        Path("results/raw_images") / mode / f"iter{epoch:03d}")
+                        base_path / 'predictions' / f"iter{epoch:03d}")
 
             tq_iter.set_postfix({"DSC": f"{log_dice[:j+1].mean():05.3f}"})
             tq_iter.update(1)

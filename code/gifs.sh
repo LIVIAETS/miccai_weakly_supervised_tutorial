@@ -2,8 +2,8 @@
 
 # Requires ImageMagick
 
-f1=results/images/TOY/unconstrained
-f2=results/images/TOY/constrained
+f1=results/TOY/grids/unconstrained
+f2=results/TOY/grids/constrained
 
 echo $f1 $f2
 
