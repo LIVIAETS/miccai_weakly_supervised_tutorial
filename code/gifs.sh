@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
+set -e  # Exit on first error
 
 # Requires ImageMagick
 
-f1=results/TOY/grids/unconstrained
-f2=results/TOY/grids/constrained
+f1=results/TOY/unconstrained/grids
+f2=results/TOY/constrained/grids
 
 echo $f1 $f2
 
