@@ -138,25 +138,33 @@ def saveImages(net, img_batch, batch_size, epoch, dataset, mode, device):
 
         tq_iter = tqdm_(enumerate(img_batch), total=len(img_batch), desc=desc)
         for j, data in tq_iter:
-            img = data["img"].to(device)
+            img = data["img"].to(device)  # [0, 1] range
             weak_mask = data["weak_mask"].to(device)
             full_mask = data["full_mask"].to(device)
 
             logits = net(img)
             probs = F.softmax(5 * logits, dim=1)
+            _, K, _, _ = probs.shape
 
-            segmentation = probs2class(probs)[:, None, ...].float()
-            log_dice[j] = dice_coef(probs2one_hot(probs), full_mask)[0, 1]  # 1st item, 2nd class
+            log_dice[j] = dice_coef(probs2one_hot(probs), full_mask)[0, 1:].mean()  # 1st item, 2nd class
 
-            out = torch.cat((img, segmentation, weak_mask[:, [1], ...]))
+            segmentation = probs2class(probs)[:, None, ...]  # [0, K-1] range
+            weak_classes = probs2class(weak_mask)[:, None, ...]  # [0, K-1] range
+            assert img.shape == segmentation.shape == weak_classes.shape, (img.shape,
+                                                                           segmentation.shape,
+                                                                           weak_classes.shape)
 
-            torchvision.utils.save_image(out.data, base_path / 'grids' / f"{j}_Ep_{epoch:04d}.png",
-                                         nrow=batch_size,
+            # Get the first item of the batch, due to a bug of save_image
+            # Multiplying img by (K - 1) is a way to scale is the same way as the labels
+            torchvision.utils.save_image([img[0] * (K - 1), segmentation[0], weak_classes[0]],
+                                         base_path / 'grids' / f"{j}_Ep_{epoch:04d}.png",
+                                         nrow=1,
                                          padding=2,
-                                         normalize=False,
-                                         range=None,
+                                         normalize=True,
                                          scale_each=False,
-                                         pad_value=0)
+                                         value_range=(0, K - 1),
+                                         pad_value=0
+                                         )
 
             predicted_class: Tensor = probs2class(probs)
             filenames: List[str] = [Path(p).stem for p in data["path"]]
