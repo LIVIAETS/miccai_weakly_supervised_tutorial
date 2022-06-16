@@ -54,7 +54,7 @@ def gen_img(i: int, W: int, H: int, r: int, gt_folder: Path, img_folder: Path, e
     cx, cy = np.random.randint(rx, W - rx), np.random.randint(ry, H - ry)
 
     img_canvas.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], 125, 125)
-    gt_canvas.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], 1, 1)
+    gt_canvas.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], 255, 255)
 
     img_arr: np.ndarray = np.asarray(img)
     with_noise: np.ndarray = noise(img_arr)
