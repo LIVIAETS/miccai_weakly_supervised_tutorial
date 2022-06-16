@@ -96,11 +96,11 @@ def runTraining(args):
     Loss_Size: Callable[[Tensor, Tensor], Tensor]
     Loss_Centroid: Callable[[Tensor, Tensor], Tensor]
     if args.mode == "quadratic":
-        Loss_Size = ParametrableQuadraticPenalty(function=soft_size)
-        Loss_Centroid = ParametrableQuadraticPenalty(function=soft_centroid)
+        Loss_Size = ParametrableQuadraticPenalty(idk=[1], function=soft_size)
+        Loss_Centroid = ParametrableQuadraticPenalty(idk=[1], function=soft_centroid)
     elif args.mode == "logbarrier":
-        Loss_Size = ParametrableLogBarrier(function=soft_size)
-        Loss_Centroid = ParametrableLogBarrier(function=soft_centroid)
+        Loss_Size = ParametrableLogBarrier(idk=[1], function=soft_size)
+        Loss_Centroid = ParametrableLogBarrier(idk=[1], function=soft_centroid)
 
     for i in range(args.epochs):
         net.train()
