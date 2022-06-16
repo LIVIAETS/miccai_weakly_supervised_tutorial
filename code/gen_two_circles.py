@@ -19,24 +19,30 @@ def main(args) -> None:
 
     for folder, n_img in zip(["train", "val"], args.n):
         gt_folder: Path = Path(args.dest, folder, 'gt')
+        weak_folder: Path = Path(args.dest, folder, 'weak')
         img_folder: Path = Path(args.dest, folder, 'img')
 
         gt_folder.mkdir(parents=True, exist_ok=True)
+        weak_folder.mkdir(parents=True, exist_ok=True)
         img_folder.mkdir(parents=True, exist_ok=True)
 
-        gen_fn = partial(gen_img, W=W, H=W, r=r, gt_folder=gt_folder, img_folder=img_folder, ellipsis=args.ellipsis)
+        gen_fn = partial(gen_img, W=W, H=W, r=r,
+                         gt_folder=gt_folder, img_folder=img_folder, weak_folder=weak_folder,
+                         ellipsis=args.ellipsis)
 
         # mmap_(gen_fn, range(n_img))
         for i in tqdm(range(n_img)):
             gen_fn(i)
 
 
-def gen_img(i: int, W: int, H: int, r: int, gt_folder: Path, img_folder: Path, ellipsis: bool = False) -> None:
+def gen_img(i: int, W: int, H: int, r: int, gt_folder: Path, img_folder: Path, weak_folder: Path, ellipsis: bool = False) -> None:
     img: Image = Image.new("L", (W, H), 0)
     gt: Image = Image.new("L", (W, H), 0)
+    weak: Image = Image.new("L", (W, H), 0)
 
     img_canvas = ImageDraw.Draw(img)
     gt_canvas = ImageDraw.Draw(gt)
+    weak_canvas = ImageDraw.Draw(weak)
 
     rx: int
     ry: int
@@ -55,12 +61,14 @@ def gen_img(i: int, W: int, H: int, r: int, gt_folder: Path, img_folder: Path, e
 
     img_canvas.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], 125, 125)
     gt_canvas.ellipse([cx - rx, cy - ry, cx + rx, cy + ry], 255, 255)
+    weak_canvas.ellipse([cx - rx // 10, cy - ry // 10, cx + rx // 10, cy + ry // 10], 255, 255)
 
     img_arr: np.ndarray = np.asarray(img)
     with_noise: np.ndarray = noise(img_arr)
 
     filename: str = f"{i:05d}"
     gt.save(Path(gt_folder, filename).with_suffix(".png"))
+    weak.save(Path(weak_folder, filename).with_suffix(".png"))
     Image.fromarray(with_noise).save(Path(img_folder, filename).with_suffix(".png"))
 
 
