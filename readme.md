@@ -88,7 +88,20 @@ The three modes correspond to:
 
 The settings for PROMISE12 are too simple to get state of the art results, even in the `full` mode, but it gives a good starting point for new practitioners to then build on.
 
-## MICCAI 2020 recordings
+Examples constraining both the size and the centroid, without resorting to any pixel-wise supervision, are shown:
+```
+>>>  ./main_centroid.py -h
+usage: main_centroid.py [-h] [--epochs EPOCHS] [--dataset {TOY2}] [--mode {quadratic,logbarrier}] [--gpu]
+
+options:
+  -h, --help            show this help message and exit
+  --epochs EPOCHS
+  --dataset {TOY2}
+  --mode {quadratic,logbarrier}
+  --gpu
+```
+
+## MICCAI 2021 recordings
 While the recording and slides are not yet available, the ones from last year are still online.
 
 ### Slides
