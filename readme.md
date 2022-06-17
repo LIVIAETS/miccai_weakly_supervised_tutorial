@@ -1,4 +1,4 @@
-# MICCAI 2022 Tutorial
+# MICCAI 2022 Tutorial (in development)
 ## Weakly Supervised CNN Segmentation: Models and Optimization
 
 **The code for the 2021 tutorial is available at commit [c8d5d248dd8b504b53c56449ea526799df87e3ea](https://github.com/LIVIAETS/miccai_weakly_supervised_tutorial/commit/c8d5d248dd8b504b53c56449ea526799df87e3ea) (tag `MICCAI2021`).** Other older tutorials (`MICCAI2020`, `MICCAI2019`) are also tagged.
