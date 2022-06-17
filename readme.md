@@ -65,12 +65,12 @@ make data/ACDC
 #### Training
 ```
 >>> ./main.py -h
-usage: main.py [-h] [--epochs EPOCHS] [--dataset {TOY,PROMISE12}] [--mode {constrained,unconstrained,full}] [--gpu]
+usage: main.py [-h] [--epochs EPOCHS] [--dataset {TOY,TOY2,PROMISE12,ACDC}] [--mode {constrained,unconstrained,full}] [--gpu]
 
-optional arguments:
+options:
   -h, --help            show this help message and exit
   --epochs EPOCHS
-  --dataset {TOY,PROMISE12,ACDC}
+  --dataset {TOY,TOY2,PROMISE12,ACDC}
   --mode {constrained,unconstrained,full}
   --gpu
 ```

@@ -24,7 +24,6 @@ from utils.utils import (weights_init,
                          dice_coef)
 
 from utils.losses import (CrossEntropy,
-                          PartialCrossEntropy,
                           NaiveSizeLoss)
 
 
@@ -36,7 +35,7 @@ def setup(args) -> Tuple[nn.Module, Any, Any, DataLoader, DataLoader, int]:
 
     K = 2  # K for the number of classes
     # Avoids the clases with C (often used for the number of Channel)
-    if args.dataset == 'TOY':
+    if args.dataset in ['TOY', 'TOY2']:
         initial_kernels = 4
         print(">> Using a shallowCNN")
         net = shallowCNN(1, initial_kernels, K)
@@ -185,7 +184,7 @@ def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument('--epochs', default=200, type=int)
-    parser.add_argument('--dataset', default='TOY', choices=['TOY', 'PROMISE12', 'ACDC'])
+    parser.add_argument('--dataset', default='TOY', choices=['TOY', 'TOY2', 'PROMISE12', 'ACDC'])
     parser.add_argument('--mode', default='unconstrained', choices=['constrained', 'unconstrained', 'full'])
 
     parser.add_argument('--gpu', action='store_true')
