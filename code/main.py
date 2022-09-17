@@ -135,8 +135,9 @@ def runTraining(args):
 
             logits = net(img)
             pred_softmax = F.softmax(5 * logits, dim=1)
-            pred_seg = probs2one_hot(pred_softmax)
 
+            # Metrics computation, not used for training
+            pred_seg = probs2one_hot(pred_softmax)
             # `1:` for class 1 onward. This way handle both binary and mult-class
             # 1st item, all classes except background
             pred_size = einsum("bkwh->bk", pred_seg)[0, 1:].cpu()
@@ -162,7 +163,10 @@ def runTraining(args):
                 log_ce[j] = ce_val.item()
 
                 sizeLoss_val = sizeLoss(pred_softmax, bounds)
-                log_sizeloss[j] = sizeLoss_val[0, 1:].mean()
+                if K > 2:
+                    log_sizeloss[j] = sizeLoss_val[0, 1:].mean()
+                else:
+                    log_sizeloss[j] = sizeLoss_val.item()
 
                 lossEpoch = ce_val + sizeLoss_val.sum() / 100
 

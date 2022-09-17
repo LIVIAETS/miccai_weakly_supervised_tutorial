@@ -68,6 +68,8 @@ class NaiveSizeLoss():
         loss = F.relu(pred_size - upper_bounds) ** 2 + F.relu(lower_bounds - pred_size) ** 2
         loss /= (W * H)
 
+        assert loss.shape == (B, len(self.idk))
+
         return loss
 
 

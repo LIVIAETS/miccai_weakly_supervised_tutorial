@@ -239,7 +239,7 @@ def soft_centroid(a: Tensor) -> Tensor:
                    for t in tensor_grids)
 
         flotted = a.type(torch.float32)
-        tot = einsum("bk...->bk", flotted) + 1e-10
+        tot = einsum("bkwh->bk", flotted) + 1e-10
         assert tot.dtype == torch.float32
 
         centroids = [einsum("bkwh,wh->bk", flotted, grid) / tot
