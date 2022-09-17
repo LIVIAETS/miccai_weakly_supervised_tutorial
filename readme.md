@@ -39,6 +39,20 @@ ACDC relies on, for the slicing:
 nibabel
 ```
 
+
+To quickly bootstrap an installation, you can use the following commands in your shell:
+```shell
+python3 -m venv miccaiweaksup
+source miccaiweaksup/bin/activate
+which python  # ensure this is not your system's python anymore
+python3 -m pip install -r requirements.txt
+```
+
+and at the end of the session, in your shell:
+```shell
+deactivate
+```
+
 #### Data
 The data for the toy example is stored in `code/data/TOY`. If you wish, you can regenerate the dataset with:
 ```
@@ -100,6 +114,20 @@ options:
   --mode {quadratic,logbarrier}
   --gpu
 ```
+
+## Going further
+The current code can have a lot of `assert`, which is very helpful for development and debugging, but might slow the training a bit.
+`assert` can be disabled completely, by adding the, `-O` parameter to the python interpreter:
+```shell
+python3 -O main.py --dataset PROMISE12 --mode full --gpu
+```
+
+You can always e-mail me for technical questions.
+
+### Useful resources
+* [Pytorch documentation](https://pytorch.org/docs/stable/index.html)
+* [Numpy documentation](https://numpy.org/doc/stable/)
+* [GNU Make manual](https://www.gnu.org/software/make/manual/make.html)
 
 ## MICCAI 2021 recordings
 While the recording and slides are not yet available, the ones from last year are still online.
