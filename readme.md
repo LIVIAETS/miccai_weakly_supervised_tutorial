@@ -125,6 +125,7 @@ python3 -O main.py --dataset PROMISE12 --mode full --gpu
 You can always e-mail me for technical questions.
 
 ### Useful resources
+* [Custom segmentation viewer](https://github.com/HKervadec/segmentation_viewer)
 * [Pytorch documentation](https://pytorch.org/docs/stable/index.html)
 * [Numpy documentation](https://numpy.org/doc/stable/)
 * [GNU Make manual](https://www.gnu.org/software/make/manual/make.html)
