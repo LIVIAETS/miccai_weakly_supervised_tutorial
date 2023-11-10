@@ -103,9 +103,15 @@ def runTraining(args):
     print(f">>> Setting up to train on {args.dataset} with {args.mode}")
     net, optimizer, device, train_loader, val_loader, K = setup(args)
 
-    ce_loss = CrossEntropy(idk=list(range(K)))  # Supervise both background and foreground
-    partial_ce = CrossEntropy(idk=list(range(1, K)))  # Don't supervised background
-    sizeLoss = NaiveSizeLoss(idk=list(range(1, K)))
+    if args.mode == "full":
+        ce_loss = CrossEntropy(idk=list(range(K)))  # Supervise both background and foreground
+    elif args.mode in ["unconstrained", "constrained"]:
+        partial_ce = CrossEntropy(idk=list(range(1, K)))  # Don't supervised background
+    else:
+        raise ValueError(args.mode)
+
+    if args.mode == "constrained":
+        sizeLoss = NaiveSizeLoss(idk=list(range(1, K)))
 
     for i in range(args.epochs):
         net.train()
