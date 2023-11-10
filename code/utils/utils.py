@@ -11,8 +11,8 @@ import torchvision
 import numpy as np
 import torch.nn as nn
 import torch.nn.functional as F
+from PIL import Image
 from tqdm import tqdm
-from skimage.io import imsave
 from torch import Tensor, einsum
 
 tqdm_ = partial(tqdm, ncols=125,
@@ -114,7 +114,7 @@ def save_images(segs: Tensor, names: Iterable[str], root: Path) -> None:
                 save_path.parent.mkdir(parents=True, exist_ok=True)
 
                 if len(seg.shape) == 2:
-                        imsave(str(save_path), seg.detach().cpu().numpy().astype(np.uint8))
+                        Image.fromarray(seg.detach().cpu().numpy().astype(np.uint8)).save(save_path)
                 elif len(seg.shape) == 3:
                         np.save(str(save_path), seg.detach().cpu().numpy())
                 else:

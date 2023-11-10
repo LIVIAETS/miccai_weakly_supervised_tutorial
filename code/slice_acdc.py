@@ -6,16 +6,13 @@ import argparse
 import warnings
 from pathlib import Path
 from pprint import pprint
-from functools import partial
-from typing import Any, Callable, List, Tuple
+from typing import List, Tuple
 
 import numpy as np
 import nibabel as nib
 from tqdm import tqdm
-from skimage.io import imsave
 from PIL import Image, ImageDraw
 from numpy import unique as uniq
-from skimage.transform import resize
 
 
 def norm_arr(img: np.ndarray) -> np.ndarray:
@@ -43,6 +40,11 @@ def get_p_id(path: Path) -> str:
 
     assert "patient" in res, res
     return res
+
+
+def resize_(arr: np.ndarray, shape: tuple[int, int]) -> np.ndarray:
+    return np.asarray(Image.fromarray(arr).resize(shape,
+                      resample=Image.Resampling.NEAREST)).astype(np.uint8)
 
 
 def save_slices(img_p: Path, gt_p: Path,
@@ -78,8 +80,6 @@ def save_slices(img_p: Path, gt_p: Path,
     assert 0 == norm_img.min() and norm_img.max() == 255, (norm_img.min(), norm_img.max())
     assert gt.dtype == norm_img.dtype == np.uint8
 
-    resize_: Callable = partial(resize, mode="constant", preserve_range=True, anti_aliasing=False)
-
     save_dir_img: Path = Path(dest_dir, img_dir)
     save_dir_gt: Path = Path(dest_dir, gt_dir)
     save_dir_weak: Path = Path(dest_dir, "weak")
@@ -91,8 +91,8 @@ def save_slices(img_p: Path, gt_p: Path,
         assert gt_s.dtype == np.uint8
 
         # Resize and check the data are still what we expect
-        r_img: np.ndarray = resize_(img_s, shape).astype(np.uint8)
-        r_gt: np.ndarray = resize_(gt_s, shape, order=0)
+        r_img: np.ndarray = resize_(img_s, shape)
+        r_gt: np.ndarray = resize_(gt_s, shape)
         # r_gt: np.ndarray = np.array(Image.fromarray(gt_s, mode='L').resize(shape))
         assert set(uniq(r_gt)).issubset(set(uniq(gt))), (r_gt.dtype, uniq(r_gt))
         r_gt = r_gt.astype(np.uint8)
@@ -117,7 +117,7 @@ def save_slices(img_p: Path, gt_p: Path,
 
             with warnings.catch_warnings():
                 warnings.filterwarnings("ignore", category=UserWarning)
-                imsave(str(save_path), data)
+                Image.fromarray(data).save(save_path)
 
 
 def random_strat(orig_mask: np.ndarray, classes: List[int]) -> np.ndarray:

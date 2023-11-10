@@ -7,7 +7,7 @@ import warnings
 from pathlib import Path
 from pprint import pprint
 from functools import partial
-from typing import Any, Callable, List, Tuple
+from typing import List, Tuple
 
 import numpy as np
 import SimpleITK as sitk
@@ -34,6 +34,11 @@ def get_p_id(path: Path, regex: str = "(Case\d+)(_segmentation)?") -> str:
     if matched:
         return matched.group(1)
     raise ValueError(regex, path)
+
+
+def resize_(arr: np.ndarray, shape: tuple[int]) -> np.ndarray:
+    return np.asarray(Image.fromarray(arr).resize(shape,
+                      resample=Image.Resampling.NEAREST)).astype(np.uint8)
 
 
 def save_slices(img_p: Path, gt_p: Path,
@@ -82,9 +87,8 @@ def save_slices(img_p: Path, gt_p: Path,
         # Resize and check the data are still what we expect
         # from time import time
         # tic = time()
-        resize_: Callable = partial(resize, mode="constant", preserve_range=True, anti_aliasing=False)
-        r_img: np.ndarray = resize_(img_s, shape).astype(np.uint8)
-        r_gt: np.ndarray = resize_(gt_s, shape).astype(np.uint8)
+        r_img: np.ndarray = resize_(img_s, shape)
+        r_gt: np.ndarray = resize_(gt_s, shape)
         # print(time() - tic)
         assert r_img.dtype == r_gt.dtype == np.uint8
         assert 0 <= r_img.min() and r_img.max() <= 255  # The range might be smaller
